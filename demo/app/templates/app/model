@@ -1,0 +1,9 @@
+// {{ model.name  }}
+table! {
+    #[sql_name = "{{model.db_table}}"]
+    {{ model.name }}({{ model.meta.pk.name }}) {
+        {% for field_name, field_type in model.diesel_fields %}{{ field_name }} -> {{ field_type|safe }},
+        {% endfor %}
+    }
+}
+

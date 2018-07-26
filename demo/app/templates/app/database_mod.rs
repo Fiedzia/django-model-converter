@@ -1,3 +1,4 @@
-pub mod {{ database.name }} {
+{% load convert %}
+pub mod {{ database.name|name4rust }} {
     {{ database.render }}
 }
