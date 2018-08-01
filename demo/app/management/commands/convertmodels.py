@@ -2,11 +2,11 @@ import sys
 
 from django.apps import apps
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandParser
 from django.db.models import fields
 from django.template import loader
 
-from .fstemplate import Directory, File, Root
+from .fstemplate import File, Root
 
 DIESEL_SCHEMA_FIELD_MAP = {
     fields.AutoField: 'Integer',
@@ -143,41 +143,71 @@ class AppData:
 
 
 class Command(BaseCommand):
-    help = 'Closes the specified poll for voting'
+    help = 'Export django model definitions'
 
     def add_arguments(self, parser):
-        parser.add_argument('-t', '--target', type=str, help='target directory')
+
+        class SubParser(CommandParser):
+
+            def __init__(self, **kwargs):
+                super(SubParser, self).__init__(self, **kwargs)
+
+        subparsers = parser.add_subparsers(title="subcommands", parser_class=SubParser)
+
+        cmd_list = subparsers.add_parser(
+            'list',
+            help='List available models',
+        )
+        cmd_list.set_defaults(cmd='info')
+
+        cmd_export = subparsers.add_parser(
+            'export',
+            help='Export model info',
+        )
+        cmd_export.add_argument('-t', '--target', type=str, help='target directory')
+        cmd_export.set_defaults(cmd='export')
 
     def handle(self, *args, **options):
-        #import pudb; pudb.set_trace()
+
         app_data = AppData()
-        for app in app_data.apps:
-            print(app.config.verbose_name)
-            for model in app.models:
-                print('    {}'.format(model.django_model.__name__))
-                #model._meta.db_table
-                #model._meta.db_tablespace
-                #model._meta.pk
-                #model._meta.verbose_name
-                #model._meta.verbose_name_plural
-                for field in model.django_model._meta.fields:
-                    print('        ', field)
-                    #field.blank
-                    #field,choices
-                    #field.cast_db_type(connection)
-                    #field.column
-                    #field.column
-                    #field.db_index
-                    #field.db_type(connection)
-                    #field.db_parameters(connection)
-                    #field.default
-                    #field.is_relation
-                    #field.many_to_many
-                    #field.many_to_one
-                    #field.name
-                    #field.null
-        template = loader.get_template('app/mod.rs')
-        root = Root()
-        root.add_file('mod.rs', File(content=template.render(dict(app_data=app_data))))
-        root.materialize(options['target'])
-        print('Done')
+        if 'cmd' not in options:
+            print('You need to use one of subcommands: info, export')
+        elif options['cmd'] == 'info':
+            for app in app_data.apps:
+                print(app.config.name)
+                for model in app.models:
+                    print('    {}'.format(model.django_model.__name__))
+                    # model._meta.db_table
+                    # model._meta.db_tablespace
+                    # model._meta.pk
+                    # model._meta.verbose_name
+                    # model._meta.verbose_name_plural
+                    for field in model.django_model._meta.fields:
+                        print('        {}: {}'.format(field.name, type(field).__name__))
+                        # field.blank
+                        # field,choices
+                        # field.cast_db_type(connection)
+                        # field.column
+                        # field.column
+                        # field.db_index
+                        # field.db_type(connection)
+                        # field.db_parameters(connection)
+                        # field.default
+                        # field.is_relation
+                        # field.many_to_many
+                        # field.many_to_one
+                        # field.name
+                        # field.null
+        elif options['cmd'] == 'export':
+            root = Root()
+            root.add_file(
+                'mod.rs',
+                File(
+                    template=loader.get_template('app/mod.rs'),
+                    data={
+                        'app_data': app_data
+                    }
+                )
+            )
+            root.materialize(options['target'])
+            print('Done')

@@ -53,9 +53,10 @@ class Directory(Root):
 
 class File:
 
-    def __init__(self, content: str=""):
-        self.content = content
+    def __init__(self, template, data=None):
+        self.template= template
+        self.data = data or {}
 
     def materialize(self, path: str):
         with open(path, 'w') as f:
-            f.write(self.content)
+            f.write(self.template.render(self.data))
